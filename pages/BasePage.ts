@@ -20,7 +20,16 @@ export class BasePage {
   }
 
   async openCart() {
-    await this.page.getByRole('link', { name: 'Cart' }).click();
+    const modalViewCart = this.page
+      .locator('#cartModal')
+      .getByRole('link', { name: 'View Cart' });
+
+    if (await modalViewCart.isVisible()) {
+      await modalViewCart.click();
+      return;
+    }
+
+    await this.page.getByRole('link', { name: 'Cart' }).first().click();
   }
 
   async openContactUs() {

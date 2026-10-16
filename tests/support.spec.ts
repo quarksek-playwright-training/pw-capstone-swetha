@@ -6,26 +6,34 @@ import {
 test(
   '@regression @support contact form confirmation dialog',
   async ({ page }) => {
+    await page.goto('/contact_us', { waitUntil: 'load' });
 
-    await page.goto('/');
-
-    await page.getByRole('link', {
-      name: 'Contact us',
-    }).click();
-
+    // Verify that the contact form is displayed.
     await expect(
       page.getByText('GET IN TOUCH')
     ).toBeVisible();
 
+    await expect.poll(
+      () => page.evaluate(() =>
+        typeof (window as Window & { jQuery?: unknown }).jQuery
+      )
+    ).toBe('function');
+    await expect.poll(
+      () => page.evaluate(() =>
+        Array.from(document.scripts).some(script =>
+          script.textContent?.includes('#contact-us-form')
+        )
+      )
+    ).toBe(true);
+
+    // Fill in the contact form.
     await page
       .getByPlaceholder('Name')
       .fill('Playwright User');
 
     await page
-      .getByPlaceholder('Email')
-      .fill(
-        'playwright.support@example.com'
-      );
+      .locator('input[data-qa="email"]')
+      .fill('playwright.support@example.com');
 
     await page
       .getByPlaceholder('Subject')
@@ -33,26 +41,21 @@ test(
 
     await page
       .getByPlaceholder('Your Message Here')
-      .fill(
-        'This is an automated support test.'
-      );
+      .fill('This is an automated support test.');
 
-    // Native browser confirmation dialog.
-    page.once('dialog', async dialog => {
-
-      expect(dialog.type()).toBe('confirm');
-
-      await dialog.accept();
-    });
-
-    await page.getByRole('button', {
+    const dialogPromise = page.waitForEvent('dialog');
+    const clickPromise = page.getByRole('button', {
       name: 'Submit',
     }).click();
 
+    const dialog = await dialogPromise;
+    expect(dialog.type()).toBe('confirm');
+    expect(dialog.message()).toBe('Press OK to proceed!');
+    await dialog.accept();
+    await clickPromise;
+
     await expect(
-      page.getByText(
-        'Success! Your details have been submitted successfully.'
-      )
+      page.locator('#form-section a.btn-success')
     ).toBeVisible();
   }
 );

@@ -1,5 +1,9 @@
 import { test, expect } from '../fixtures/fixtures';
 
+test.use({
+  storageState: { cookies: [], origins: [] },
+});
+
 test(
   '@regression @auth @negative invalid password',
   async ({ loginPage }) => {

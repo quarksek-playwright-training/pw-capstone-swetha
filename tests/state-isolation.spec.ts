@@ -21,59 +21,71 @@ test(
     const account2Page =
       await account2Context.newPage();
 
-    // -------------------------
-    // Account 1
-    // -------------------------
+    const clearCart = async (page: typeof account1Page) => {
+      const rows = page.locator('#cart_info_table tbody tr');
 
-    await account1Page.goto('/cart');
+      while (await rows.count() > 0) {
+        const rowCount = await rows.count();
 
-    await expect(
-      account1Page.getByText('Cart is empty!')
-    ).toBeVisible();
+        await rows
+          .first()
+          .locator('a.cart_quantity_delete')
+          .click();
 
-    // -------------------------
-    // Account 2
-    // -------------------------
+        await expect(rows).toHaveCount(rowCount - 1);
+      }
+    };
 
-    await account2Page.goto('/products');
+    try {
+      await account1Page.goto('/view_cart');
+      await clearCart(account1Page);
 
-    const firstProduct =
-      account2Page.locator('.product-image-wrapper').first();
+      await expect(
+        account1Page.locator('#cart_info_table tbody tr')
+      ).toHaveCount(0);
 
-    await firstProduct.hover();
+      await account2Page.goto('/view_cart');
+      await clearCart(account2Page);
 
-    await firstProduct
-      .locator(
-        'a.add-to-cart'
-      )
-      .click();
+      await account2Page.goto('/products');
 
-    await account2Page.getByRole('link', {
-      name: 'Cart',
-    }).click();
+      const firstProduct =
+        account2Page.locator('.product-image-wrapper').first();
 
-    await expect(
-      account2Page.locator('#cart_info_table tbody tr')
-    ).toHaveCount(1);
+      await firstProduct.hover();
 
-    // -------------------------
-    // Check account 1 again
-    // -------------------------
+      await firstProduct
+        .locator('a.add-to-cart')
+        .first()
+        .click();
 
-    await account1Page.reload();
+      await expect(
+        account2Page.getByText('Your product has been added to cart.')
+      ).toBeVisible();
 
-    await expect(
-      account1Page.locator('#cart_info_table tbody tr')
-    ).toHaveCount(0);
+      await account2Page.getByRole('link', {
+        name: 'View Cart',
+      }).click();
 
-    // Cleanup account 2 through UI.
-    await account2Page
-      .locator(
-        '#cart_info_table tbody tr:first-child .cart_quantity_delete a'
-      )
-      .click();
+      await expect(
+        account2Page.locator('#cart_info_table tbody tr')
+      ).toHaveCount(1);
 
-    await account1Context.close();
-    await account2Context.close();
+      await account1Page.reload();
+
+      await expect(
+        account1Page.locator('#cart_info_table tbody tr')
+      ).toHaveCount(0);
+    } finally {
+      try {
+        await account2Page.goto('/view_cart');
+        await clearCart(account2Page);
+      } finally {
+        await Promise.all([
+          account1Context.close(),
+          account2Context.close(),
+        ]);
+      }
+    }
   }
 );
