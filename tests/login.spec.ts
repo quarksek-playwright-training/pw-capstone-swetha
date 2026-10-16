@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+test.use({
+  storageState: { cookies: [], origins: [] },
+});
+
 const account = {
   name: 'Playwright User One',
   email: 'playwright.user.one@example.com',
@@ -8,14 +12,7 @@ const account = {
 
 test(
   '@smoke auth login with valid credentials',
-  async ({ browser }) => {
-
-    // Independent context.
-    // This does NOT use the shared authenticated storage state.
-    const context = await browser.newContext();
-
-    const page = await context.newPage();
-
+  async ({ page }) => {
     await page.goto('/login');
 
     await page
@@ -34,7 +31,5 @@ test(
     await expect(
       page.getByText(`Logged in as ${account.name}`)
     ).toBeVisible();
-
-    await context.close();
   }
 );

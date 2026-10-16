@@ -11,6 +11,9 @@ test(
     const productName = 'Blue Top';
 
     await productsPage.openProductsPage();
+    await productsPage.openCart();
+    await cartPage.clearCart();
+    await productsPage.openProductsPage();
 
     await productsPage.addProduct(productName);
 
@@ -26,16 +29,25 @@ test(
 
     expect(response.ok()).toBeTruthy();
 
-    const body = await response.json();
+    const body: {
+      products: Array<{ name: string; price: string }>;
+    } = await response.json();
 
     const apiProduct = body.products.find(
-      (product: any) =>
-        product.name === productName
+      product => product.name === productName
     );
 
-    expect(apiProduct).toBeDefined();
+    if (!apiProduct) {
+      throw new Error(
+        `Product "${productName}" was not returned by the products API`
+      );
+    }
 
-    const apiPrice = Number(apiProduct.price);
+    const apiPrice = Number(
+      apiProduct.price.replace(/[^\d]/g, '')
+    );
+
+    expect(Number.isFinite(apiPrice)).toBeTruthy();
 
     expect(uiPrice).toBe(apiPrice);
 

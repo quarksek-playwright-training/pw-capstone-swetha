@@ -20,8 +20,7 @@ export class LoginPage extends BasePage {
   );
 
   async openLoginPage() {
-    await this.goToHome();
-    await this.openLogin();
+    await this.open('/login');
   }
 
   async login(email: string, password: string) {

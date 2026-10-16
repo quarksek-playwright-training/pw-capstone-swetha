@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 export class CartPage extends BasePage {
@@ -40,20 +40,32 @@ export class CartPage extends BasePage {
   async removeProduct(productName: string) {
     const row = this.getProductRow(productName);
 
-    await row
-      .locator('.cart_quantity_delete a')
-      .click();
-
-    await expect(row).toHaveCount(0);
+    await this.deleteCartRow(row);
   }
 
   async clearCart() {
     while (await this.cartRows.count() > 0) {
-      await this.cartRows
-        .first()
-        .locator('.cart_quantity_delete a')
-        .click();
+      await this.deleteCartRow(this.cartRows.first());
     }
+  }
+
+  private async deleteCartRow(row: Locator) {
+    const deleteLink = row.locator('a.cart_quantity_delete');
+    const productId = await deleteLink.getAttribute('data-product-id');
+
+    if (!productId) {
+      throw new Error('Cart delete link is missing its product id');
+    }
+
+    const [response] = await Promise.all([
+      this.page.waitForResponse(response =>
+        new URL(response.url()).pathname === `/delete_cart/${productId}`
+      ),
+      deleteLink.click(),
+    ]);
+
+    expect(response.ok()).toBeTruthy();
+    await expect(row).toHaveCount(0);
   }
 
   async verifyCartEmpty() {

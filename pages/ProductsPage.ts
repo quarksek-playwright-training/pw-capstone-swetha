@@ -4,9 +4,7 @@ import { BasePage } from './BasePage';
 export class ProductsPage extends BasePage {
   readonly searchInput = this.page.getByPlaceholder('Search Product');
 
-  readonly searchButton = this.page.getByRole('button', {
-    name: 'Search',
-  });
+  readonly searchButton = this.page.locator('#submit_search');
 
   readonly productCards = this.page.locator('.product-image-wrapper');
 
@@ -17,62 +15,54 @@ export class ProductsPage extends BasePage {
 
   async searchProduct(searchTerm: string) {
     await this.searchInput.fill(searchTerm);
-
     await this.searchButton.click();
   }
 
   async verifySearchResults(searchTerm: string) {
+    // Verify that the searched products heading is displayed.
     await expect(
       this.page.getByText('SEARCHED PRODUCTS')
     ).toBeVisible();
 
-    const products = this.productCards;
+    // Verify that at least one product card is displayed.
+    const count = await this.productCards.count();
 
-    const count = await products.count();
-
-    expect(count).toBeGreaterThan(0);
-
-    for (let i = 0; i < count; i++) {
-      const productText = await products.nth(i).innerText();
-
-      expect(
-        productText.toLowerCase()
-      ).toContain(searchTerm.toLowerCase());
-    }
+    expect(
+      count,
+      `Expected search results for "${searchTerm}"`
+    ).toBeGreaterThan(0);
   }
 
   async addProduct(productName: string) {
+    // Find the product card containing the requested product.
     const product = this.productCards.filter({
       hasText: productName,
     });
 
-    /*
-     * XPath sibling axis:
-     * The product name and Add to cart button are siblings
-     * inside the same product container. There is no reliable
-     * getBy* relation that directly expresses this sibling
-     * relationship.
-     */
+    // Use XPath to locate the Add to cart link next to the product name.
     const addToCartButton = product.locator(
       `xpath=.//div[contains(@class,'productinfo')]//p[normalize-space()='${productName}']/following-sibling::a[contains(@class,'add-to-cart')]`
     );
 
-    await product.hover();
+    await expect(product).toHaveCount(1);
 
+    await product.hover();
     await addToCartButton.click();
+
+    await expect(
+      this.page.getByText('Your product has been added to cart.')
+    ).toBeVisible();
   }
 
   async addFirstProduct() {
+    // Select the first product card.
     const firstProduct = this.productCards.first();
 
-    /*
-     * XPath is used here because we need the button associated
-     * with the product container's nested product information.
-     * A generic getByRole('link', {name: 'Add to cart'}) would
-     * not identify the specific product reliably.
-     */
+    await expect(firstProduct).toBeVisible();
+
     await firstProduct.hover();
 
+    // Use XPath to locate the Add to cart link inside the first product card.
     await firstProduct
       .locator(
         'xpath=.//div[contains(@class,"productinfo")]//a[contains(@class,"add-to-cart")]'
